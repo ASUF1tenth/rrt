@@ -41,6 +41,11 @@ public:
     virtual ~RRT();
 private:
 
+    // RRT parameters
+    double max_expansion_dist = 0.5; // maximum distance to expand tree at each step
+    double goal_threshold = 0.5; // distance threshold to determine if goal reached
+    double neighborhood_threshold = 1.0; // radius to search for nearby nodes in RRT*
+
     // TODO: add the publishers and subscribers you need
 
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_sub_;

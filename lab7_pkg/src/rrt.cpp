@@ -85,7 +85,14 @@ int RRT::nearest(std::vector<RRT_Node> &tree, std::vector<double> &sampled_point
     //     nearest_node (int): index of nearest node on the tree
 
     int nearest_node = 0;
-    // TODO: fill in this method
+    double dist_current_sq, dist_nearest_sq;
+    for (int i = 1; i < tree.size(); i++) {
+        dist_current_sq = pow((tree[i].x - sampled_point[0]), 2) + pow((tree[i].y - sampled_point[1]), 2);
+        dist_nearest_sq = pow((tree[nearest_node].x - sampled_point[0]), 2) + pow((tree[nearest_node].y - sampled_point[1]), 2);
+        if (dist_current_sq < dist_nearest_sq) { //if two nodes are equidistant, keep the first one
+            nearest_node = i;
+        }
+    }
 
     return nearest_node;
 }
@@ -105,8 +112,13 @@ RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) 
     //    new_node (RRT_Node): new node created from steering
 
     RRT_Node new_node;
-    // TODO: fill in this method
 
+    // new_node.parent = index of nearest_node in tree????
+    new_node.x = nearest_node.x + max_expansion_dist * (sampled_point[0] - nearest_node.x) / sqrt(pow((sampled_point[0] - nearest_node.x), 2) + pow((sampled_point[1] - nearest_node.y), 2));
+    new_node.y = nearest_node.y + max_expansion_dist * (sampled_point[1] - nearest_node.y) / sqrt(pow((sampled_point[0] - nearest_node.x), 2) + pow((sampled_point[1] - nearest_node.y), 2));
+    //new_node.cost = nearest_node.cost + max_expansion_dist or cost(tree, new_node) or line_cost(nearest_node, new_node)????
+
+    // ****This function returns the new node, we must check for collision before adding to the tree
     return new_node;
 }
 
@@ -137,7 +149,10 @@ bool RRT::is_goal(RRT_Node &latest_added_node, double goal_x, double goal_y) {
     //   close_enough (bool): true if node close enough to the goal
 
     bool close_enough = false;
-    // TODO: fill in this method
+    // if (x-x_goal)^2 + (y - y_goal)^2 < goal_threshold^2
+    if (pow((latest_added_node.x - goal_x), 2) + pow((latest_added_node.y - goal_y), 2) < goal_threshold * goal_threshold) {
+        close_enough = true;
+    }
 
     return close_enough;
 }
@@ -197,7 +212,14 @@ std::vector<int> RRT::near(std::vector<RRT_Node> &tree, RRT_Node &node) {
     //   neighborhood (std::vector<int>): the index of the nodes in the neighborhood
 
     std::vector<int> neighborhood;
-    // TODO:: fill in this method
+    double dist_sq;
+    for (int i = 0; i < tree.size(); i++) {
+        dist_sq = pow((tree[i].x - node[0]), 2) + pow((tree[i].y - node[1]), 2);
+        if (dist_sq <= neighborhood_threshold * neighborhood_threshold) {
+            neighborhood.push_back(i);
+        }
+    }
+
 
     return neighborhood;
 }
