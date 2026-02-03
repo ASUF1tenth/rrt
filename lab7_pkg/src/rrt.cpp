@@ -54,9 +54,29 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     // tree as std::vector
     std::vector<RRT_Node> tree;
 
-    RRT_Node root;
+    RRT_Node root = {0, 0, 0, -1, true}; // initialize the root node at the car's local position
+    tree.push_back(root);
+    
+    RRT_Node latest_added_node = root;
+    while (! is_goal(latest_added_node, 0.0, 1.0)){
+        // sample
+        std::vector<double> sampled_point = sample();
 
+        // nearest
+        int nearest_node_idx = nearest(tree, sampled_point);
 
+        // steer
+        RRT_Node new_node = steer(tree, nearest_node_idx, sampled_point);
+
+        // check collision
+        if (! check_collision(tree[nearest_node_idx], new_node)) {
+            // add to tree
+            tree.push_back(new_node);
+            latest_added_node = new_node;
+        }
+    }
+
+    std::vector<RRT_Node> path = find_path(tree, latest_added_node);
 
     // path found as Path message
 
