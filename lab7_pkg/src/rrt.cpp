@@ -16,6 +16,19 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
 
     // ROS publishers
     // TODO: create publishers for the the drive topic, and other topics you might need
+    // Drive command publisher
+    drive_pub_ = this->create_publisher<
+        ackermann_msgs::msg::AckermannDriveStamped>(
+        "/drive", 10);
+
+    // Path visualization publisher
+    path_pub_ = this->create_publisher<nav_msgs::msg::Path>(
+        "/rrt_path", 10);
+
+    // Tree visualization publisher
+    tree_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+        "/rrt_tree", 10);
+
 
     // ROS subscribers
     // TODO: create subscribers as you need

@@ -19,6 +19,8 @@
 #include "visualization_msgs/msg/marker.hpp"
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include <tf2_ros/transform_broadcaster.h>
+#include "nav_msgs/msg/path.hpp"
+
 
 /// CHECK: include needed ROS msg type headers and libraries
 
@@ -50,6 +52,9 @@ private:
     vector<vector<bool>> occupancy_grid; // occupancy grid representation
 
     // TODO: add the publishers and subscribers you need
+    rclcpp::Publisher<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr drive_pub_;
+    rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr tree_pub_;
 
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr pose_sub_;
     rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr scan_sub_;
