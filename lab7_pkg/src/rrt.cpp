@@ -3,6 +3,7 @@
 // Make sure you have read through the header file as well
 
 #include "rrt/rrt.h"
+#include <cmath>
 
 // Destructor of the RRT class
 RRT::~RRT() {
@@ -25,7 +26,9 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
       scan_topic, 1, std::bind(&RRT::scan_callback, this, std::placeholders::_1));
 
-    // TODO: create a occupancy grid
+    double grid_width = 2.0; // in meters
+    this->occupancy_grid = vector<vector<bool>>(grid_width / cell_size, vector<bool>(grid_width / cell_size, 0));
+    // scan_callback(scan_sub_); 
 
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "Created new RRT Object.");
 }
@@ -51,7 +54,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     // tree as std::vector
     std::vector<RRT_Node> tree;
 
-    // TODO: fill in the RRT main loop
+    RRT_Node root;
 
 
 
@@ -68,9 +71,15 @@ std::vector<double> RRT::sample() {
     //     sampled_point (std::vector<double>): the sampled point in free space
 
     std::vector<double> sampled_point;
-    // TODO: fill in this method
     // look up the documentation on how to use std::mt19937 devices with a distribution
     // the generator and the distribution is created for you (check the header file)
+    
+    double r = 0.5; // radius of the sampling region
+    x_dist.param({-r, r}); // set the range for x
+    y_dist.param({-r, r}); // set the range for y
+
+    sampled_point.push_back(x_dist(gen));
+    sampled_point.push_back(y_dist(gen));
     
     return sampled_point;
 }
