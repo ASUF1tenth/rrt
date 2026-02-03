@@ -97,7 +97,7 @@ int RRT::nearest(std::vector<RRT_Node> &tree, std::vector<double> &sampled_point
     return nearest_node;
 }
 
-RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) {
+RRT_Node RRT::steer(std::vector<RRT_Node> &tree ,int nearest_node, std::vector<double> &sampled_point) {
     // The function steer:(x,y)->z returns a point such that z is “closer” 
     // to y than x is. The point z returned by the function steer will be 
     // such that z minimizes ||z−y|| while at the same time maintaining 
@@ -106,17 +106,18 @@ RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) 
     // basically, expand the tree towards the sample point (within a max dist)
 
     // Args:
-    //    nearest_node (RRT_Node): nearest node on the tree to the sampled point
+    //    tree (std::vector<RRT_Node>): the current RRT tree
+    //    nearest_node (int): index of nearest node on the tree to the sampled point
     //    sampled_point (std::vector<double>): the sampled point in free space
     // Returns:
     //    new_node (RRT_Node): new node created from steering
 
     RRT_Node new_node;
 
-    // new_node.parent = index of nearest_node in tree????
-    new_node.x = nearest_node.x + max_expansion_dist * (sampled_point[0] - nearest_node.x) / sqrt(pow((sampled_point[0] - nearest_node.x), 2) + pow((sampled_point[1] - nearest_node.y), 2));
-    new_node.y = nearest_node.y + max_expansion_dist * (sampled_point[1] - nearest_node.y) / sqrt(pow((sampled_point[0] - nearest_node.x), 2) + pow((sampled_point[1] - nearest_node.y), 2));
-    //new_node.cost = nearest_node.cost + max_expansion_dist or cost(tree, new_node) or line_cost(nearest_node, new_node)????
+    new_node.parent = nearest_node;
+    new_node.x = tree[nearest_node].x + max_expansion_dist * (sampled_point[0] - tree[nearest_node].x) / sqrt(pow((sampled_point[0] - tree[nearest_node].x), 2) + pow((sampled_point[1] - tree[nearest_node].y), 2));
+    new_node.y = tree[nearest_node].y + max_expansion_dist * (sampled_point[1] - tree[nearest_node].y) / sqrt(pow((sampled_point[0] - tree[nearest_node].x), 2) + pow((sampled_point[1] - tree[nearest_node].y), 2));
+    new_node.cost = cost(tree, new_node);
 
     // ****This function returns the new node, we must check for collision before adding to the tree
     return new_node;
@@ -167,9 +168,15 @@ std::vector<RRT_Node> RRT::find_path(std::vector<RRT_Node> &tree, RRT_Node &late
     //   path (std::vector<RRT_Node>): the vector that represents the order of
     //      of the nodes traversed as the found path
     
-    std::vector<RRT_Node> found_path;
-    // TODO: fill in this method
+    std::vector<RRT_Node> found_path = {latest_added_node};
+    RRT_Node current_node = latest_added_node;
+    
+    while (!current_node.is_root) {
+        found_path.push_back(tree[current_node.parent]);
+        current_node = tree[current_node.parent];
+    }
 
+    std::reverse(found_path.begin(), found_path.end());
     return found_path;
 }
 
@@ -182,9 +189,11 @@ double RRT::cost(std::vector<RRT_Node> &tree, RRT_Node &node) {
     // Returns:
     //    cost (double): the cost value associated with the node
 
-    double cost = 0;
-    // TODO: fill in this method
+    if (node.is_root) {
+        return 0;
+    }
 
+    double cost = line_cost(node, tree[node.parent]) + cost(tree, tree[node.parent]);
     return cost;
 }
 
@@ -197,8 +206,7 @@ double RRT::line_cost(RRT_Node &n1, RRT_Node &n2) {
     //    cost (double): the cost value associated with the path
 
     double cost = 0;
-    // TODO: fill in this method
-
+    cost = sqrt(pow((n1.x - n2.x), 2) + pow((n1.y - n2.y), 2));
     return cost;
 }
 
@@ -214,12 +222,11 @@ std::vector<int> RRT::near(std::vector<RRT_Node> &tree, RRT_Node &node) {
     std::vector<int> neighborhood;
     double dist_sq;
     for (int i = 0; i < tree.size(); i++) {
-        dist_sq = pow((tree[i].x - node[0]), 2) + pow((tree[i].y - node[1]), 2);
+        dist_sq = pow((tree[i].x - node.x), 2) + pow((tree[i].y - node.y), 2);
         if (dist_sq <= neighborhood_threshold * neighborhood_threshold) {
             neighborhood.push_back(i);
         }
     }
-
 
     return neighborhood;
 }
