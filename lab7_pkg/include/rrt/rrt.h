@@ -48,7 +48,7 @@ private:
     double goal_threshold = 0.1; // distance threshold to determine if goal reached
     double neighborhood_threshold = 0.5; // radius to search for nearby nodes in RRT*
 
-    double cell_size = 0.1; // size of each cell in occupancy grid
+    double cell_size = 0.05; // size of each cell in occupancy grid
     vector<vector<bool>> occupancy_grid; // occupancy grid representation
 
     // TODO: add the publishers and subscribers you need

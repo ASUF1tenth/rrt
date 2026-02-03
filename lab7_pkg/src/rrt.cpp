@@ -54,6 +54,40 @@ void RRT::scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_m
     //
 
     // TODO: update your occupancy grid
+    for (auto &row : occupancy_grid) {
+        std::fill(row.begin(), row.end(), false);
+    }
+    
+    double angle = scan_msg->angle_min;
+
+    for (size_t i = 0; i < scan_msg->ranges.size(); i++) {
+
+        double r = scan_msg->ranges[i];
+
+        // Ignore invalid readings
+        if (r < scan_msg->range_min || r > scan_msg->range_max) {
+            angle += scan_msg->angle_increment;
+            continue;
+        }
+
+        // Convert polar → Cartesian (car frame)
+        double x = r * std::cos(angle);
+        double y = r * std::sin(angle);
+
+        // Convert to grid coordinates
+        int grid_x = static_cast<int>((x + grid_width / 2.0) / cell_size);
+        int grid_y = static_cast<int>((y + grid_width / 2.0) / cell_size);
+
+        // Check bounds
+        if (grid_x >= 0 && grid_x < occupancy_grid.size() &&
+            grid_y >= 0 && grid_y < occupancy_grid[0].size()) {
+
+            occupancy_grid[grid_x][grid_y] = true; // occupied
+        }
+
+        angle += scan_msg->angle_increment;
+    }
+
 }
 
 void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) {
@@ -173,11 +207,42 @@ bool RRT::check_collision(RRT_Node &nearest_node, RRT_Node &new_node) {
     //    new_node (RRT_Node): new node created from steering
     // Returns:
     //    collision (bool): true if in collision, false otherwise
-
-    bool collision = false;
     // TODO: fill in this method
 
-    return collision;
+    // Step size for checking along the edge
+    double step = cell_size / 2.0;
+
+    double dx = new_node.x - nearest_node.x;
+    double dy = new_node.y - nearest_node.y;
+    double distance = line_cost(nearest_node, new_node);
+
+    int num_steps = static_cast<int>(distance / step);
+
+    for (int i = 0; i <= num_steps; i++) {
+        double t = static_cast<double>(i) / num_steps;
+
+        // Interpolated point along the line
+        double x = nearest_node.x + t * dx;
+        double y = nearest_node.y + t * dy;
+
+        // Convert to grid coordinates
+        int grid_x = static_cast<int>((x + grid_width / 2.0) / cell_size);
+        int grid_y = static_cast<int>((y + grid_width / 2.0) / cell_size);
+
+        // Check bounds
+        if (grid_x < 0 || grid_x >= occupancy_grid.size() ||
+            grid_y < 0 || grid_y >= occupancy_grid[0].size()) {
+            continue;
+        }
+
+        // If occupied → collision
+        if (occupancy_grid[grid_x][grid_y]) {
+            return true;
+        }
+    }
+
+    // No collision detected
+    return false;
 }
 
 bool RRT::is_goal(RRT_Node &latest_added_node, double goal_x, double goal_y) {
