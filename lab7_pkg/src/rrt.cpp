@@ -99,6 +99,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     //
 
     // tree as std::vector
+    bool RRT_star = false;
     std::vector<RRT_Node> tree;
 
     RRT_Node root = {0, 0, 0, -1, true}; // initialize the root node at the car's local position
@@ -110,13 +111,35 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
         std::vector<double> sampled_point = sample();
 
         // nearest
-        int nearest_node_idx = nearest(tree, sampled_point);
+        int nearest_node_indx = nearest(tree, sampled_point);
 
         // steer
-        RRT_Node new_node = steer(tree, nearest_node_idx, sampled_point);
+        RRT_Node new_node = steer(tree, nearest_node_indx, sampled_point);
+
+        if (!RRT_star){
+            new_node.parent = nearest_node_indx;
+            new_node.cost = cost(tree, new_node);
+        }
+        else{
+            // RRT*
+            std::vector<int> neighborhood = near(tree, new_node);
+            // choose parent
+            new_node.parent = neighborhood[0];
+            double min_cost = cost(tree, new_node);
+            
+            double current_cost;
+            for (int i = 1; i < neighborhood.size(); i++) {
+                current_cost = cost(tree, tree[neighborhood[i]]) + line_cost(new_node, tree[neighborhood[i]]);
+                if (current_cost < min_cost) {
+                    min_cost = current_cost;
+                    new_node.parent = neighborhood[i];
+                }
+            }
+            new_node.cost = min_cost;
+        }
 
         // check collision
-        if (! check_collision(tree[nearest_node_idx], new_node)) {
+        if (! check_collision(tree[new_node.parent], new_node)) {
             // add to tree
             tree.push_back(new_node);
             latest_added_node = new_node;
@@ -190,10 +213,9 @@ RRT_Node RRT::steer(std::vector<RRT_Node> &tree ,int nearest_node, std::vector<d
 
     RRT_Node new_node;
 
-    new_node.parent = nearest_node;
+    new_node.is_root = false;
     new_node.x = tree[nearest_node].x + max_expansion_dist * (sampled_point[0] - tree[nearest_node].x) / sqrt(pow((sampled_point[0] - tree[nearest_node].x), 2) + pow((sampled_point[1] - tree[nearest_node].y), 2));
     new_node.y = tree[nearest_node].y + max_expansion_dist * (sampled_point[1] - tree[nearest_node].y) / sqrt(pow((sampled_point[0] - tree[nearest_node].x), 2) + pow((sampled_point[1] - tree[nearest_node].y), 2));
-    new_node.cost = cost(tree, new_node);
 
     // ****This function returns the new node, we must check for collision before adding to the tree
     return new_node;
