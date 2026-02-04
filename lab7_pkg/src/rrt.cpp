@@ -148,6 +148,29 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
 
     std::vector<RRT_Node> path = find_path(tree, latest_added_node);
 
+    nav_msgs::msg::Path path_msg;
+    path_msg.header.stamp = this->get_clock()->now();
+    path_msg.header.frame_id = "map";
+    path_msg.poses.reserve(path.size());
+
+    for (const auto &node : path) {
+        geometry_msgs::msg::PoseStamped pose;
+        pose.header = path_msg.header;
+
+        pose.pose.position.x = node.x;
+        pose.pose.position.y = node.y;
+        pose.pose.position.z = 0.0;
+
+        pose.pose.orientation.x = 0.0;
+        pose.pose.orientation.y = 0.0;
+        pose.pose.orientation.z = 0.0;
+        pose.pose.orientation.w = 1.0;  // neutral orientation temporarily *****
+
+        path_msg.poses.push_back(pose);
+    }
+
+    path_pub_->publish(path_msg);
+
     // path found as Path message
 
 }
