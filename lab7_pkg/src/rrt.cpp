@@ -4,8 +4,15 @@
 
 #include "rrt/rrt.h"
 #include "ackermann_msgs/msg/ackermann_drive_stamped.hpp"
+#include "nav_msgs/msg/path.hpp"
+#include "visualization_msgs/msg/marker_array.hpp"
 #include <cmath>
 #include <chrono>
+
+// Keep the debug timer alive for the lifetime of this translation unit so it
+// doesn't get destroyed at the end of the constructor (which cancels the timer
+// and prevents publish callbacks from running).
+static rclcpp::TimerBase::SharedPtr debug_timer_global = nullptr;
 
 // Destructor of the RRT class
 RRT::~RRT() {
@@ -52,9 +59,10 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
     rclcpp::Time start_time = this->get_clock()->now();
     rclcpp::Duration drive_duration = rclcpp::Duration::from_seconds(5.0); // drive for 5 seconds
 
-    rclcpp::TimerBase::SharedPtr debug_timer;
-    debug_timer = this->create_wall_timer(std::chrono::milliseconds(100),
-        [this, start_time, drive_duration, &debug_timer]() {
+    // Store the timer in a static variable so it survives beyond the
+    // constructor scope and keeps firing.
+    debug_timer_global = this->create_wall_timer(std::chrono::milliseconds(100),
+        [this, start_time, drive_duration]() {
             rclcpp::Time now = this->get_clock()->now();
             if (now - start_time < drive_duration) {
                 ackermann_msgs::msg::AckermannDriveStamped drive_msg;
@@ -65,7 +73,7 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
                 drive_pub_->publish(drive_msg);
             } else {
                 RCLCPP_INFO(rclcpp::get_logger("RRT"), "Finished initial debug drive.");
-                if (debug_timer) debug_timer->cancel();
+                // Let the timer continue; no further actions required here.
             }
         }
     );
