@@ -32,17 +32,16 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
 
     // ROS subscribers
     // TODO: create subscribers as you need
-    string pose_topic = "ego_racecar/odom";
-    string scan_topic = "/scan";
-    pose_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-      pose_topic, 1, std::bind(&RRT::pose_callback, this, std::placeholders::_1));
-    scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-      scan_topic, 1, std::bind(&RRT::scan_callback, this, std::placeholders::_1));
+        std::string pose_topic = "ego_racecar/odom";
+        std::string scan_topic = "/scan";
+        pose_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+            pose_topic, 1, std::bind(&RRT::pose_callback, this, std::placeholders::_1));
+        scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+            scan_topic, 1, std::bind(&RRT::scan_callback, this, std::placeholders::_1));
 
-    cell_size = 0.05; // in meters
-    grid_width = 2.0; // in meters
-    this->occupancy_grid = vector<vector<bool>>(grid_width / cell_size, vector<bool>(grid_width / cell_size, 0));
-    scan_callback(scan_sub_); 
+        cell_size = 0.05; // in meters
+        grid_width = 2.0; // in meters
+        this->occupancy_grid = std::vector<std::vector<bool>>(static_cast<size_t>(grid_width / cell_size), std::vector<bool>(static_cast<size_t>(grid_width / cell_size), 0));
 
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "Created new RRT Object.");
 }
@@ -117,7 +116,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
         int nearest_node_indx = nearest(tree, sampled_point);
 
         // steer
-        RRT_Node new_node = steer(tree, nearest_node_indx, sampled_point);
+        RRT_Node new_node = steer(tree[nearest_node_indx], sampled_point);
 
         if (!RRT_star){
             new_node.parent = nearest_node_indx;
@@ -139,6 +138,14 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
                 }
             }
             new_node.cost = min_cost;
+        }
+
+        // If the steer operation returned a node at the exact same location
+        // as its parent (zero-length expansion), treat this as a collision /
+        // invalid expansion and skip adding the node.
+        if (std::fabs(new_node.x - tree[new_node.parent].x) < 1e-6 &&
+            std::fabs(new_node.y - tree[new_node.parent].y) < 1e-6) {
+            continue;
         }
 
         // check collision
@@ -241,10 +248,22 @@ RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) 
     //    new_node (RRT_Node): new node created from steering
 
     RRT_Node new_node;
-
     new_node.is_root = false;
-    new_node.x = tree[nearest_node].x + max_expansion_dist * (sampled_point[0] - tree[nearest_node].x) / sqrt(pow((sampled_point[0] - tree[nearest_node].x), 2) + pow((sampled_point[1] - tree[nearest_node].y), 2));
-    new_node.y = tree[nearest_node].y + max_expansion_dist * (sampled_point[1] - tree[nearest_node].y) / sqrt(pow((sampled_point[0] - tree[nearest_node].x), 2) + pow((sampled_point[1] - tree[nearest_node].y), 2));
+
+    double dx = sampled_point[0] - nearest_node.x;
+    double dy = sampled_point[1] - nearest_node.y;
+    double dist = std::sqrt(dx*dx + dy*dy);
+
+    if (dist == 0.0) {
+        new_node.x = nearest_node.x;
+        new_node.y = nearest_node.y;
+    } else if (dist <= max_expansion_dist) {
+        new_node.x = sampled_point[0];
+        new_node.y = sampled_point[1];
+    } else {
+        new_node.x = nearest_node.x + max_expansion_dist * (dx / dist);
+        new_node.y = nearest_node.y + max_expansion_dist * (dy / dist);
+    }
 
     // ****This function returns the new node, we must check for collision before adding to the tree
     return new_node;
@@ -268,6 +287,7 @@ bool RRT::check_collision(RRT_Node &nearest_node, RRT_Node &new_node) {
     double distance = line_cost(nearest_node, new_node);
 
     int num_steps = static_cast<int>(distance / step);
+    if (num_steps <= 0) num_steps = 1;
 
     for (int i = 0; i <= num_steps; i++) {
         double t = static_cast<double>(i) / num_steps;
@@ -351,8 +371,9 @@ double RRT::cost(std::vector<RRT_Node> &tree, RRT_Node &node) {
         return 0;
     }
 
-    double cost = line_cost(node, tree[node.parent]) + cost(tree, tree[node.parent]);
-    return cost;
+    if (node.is_root) return 0.0; // safeguard
+    double total_cost = line_cost(node, tree[node.parent]) + cost(tree, tree[node.parent]);
+    return total_cost;
 }
 
 double RRT::line_cost(RRT_Node &n1, RRT_Node &n2) {
