@@ -3,7 +3,9 @@
 // Make sure you have read through the header file as well
 
 #include "rrt/rrt.h"
+#include "ackermann_msgs/msg/ackermann_drive_stamped.hpp"
 #include <cmath>
+#include <chrono>
 
 // Destructor of the RRT class
 RRT::~RRT() {
@@ -32,18 +34,41 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
 
     // ROS subscribers
     // TODO: create subscribers as you need
-        std::string pose_topic = "ego_racecar/odom";
-        std::string scan_topic = "/scan";
-        pose_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
-            pose_topic, 1, std::bind(&RRT::pose_callback, this, std::placeholders::_1));
-        scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
-            scan_topic, 1, std::bind(&RRT::scan_callback, this, std::placeholders::_1));
+    std::string pose_topic = "ego_racecar/odom";
+    std::string scan_topic = "/scan";
+    pose_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
+        pose_topic, 1, std::bind(&RRT::pose_callback, this, std::placeholders::_1));
+    scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
+        scan_topic, 1, std::bind(&RRT::scan_callback, this, std::placeholders::_1));
 
-        cell_size = 0.05; // in meters
-        grid_width = 2.0; // in meters
-        this->occupancy_grid = std::vector<std::vector<bool>>(static_cast<size_t>(grid_width / cell_size), std::vector<bool>(static_cast<size_t>(grid_width / cell_size), 0));
-
+    cell_size = 0.05; // in meters
+    grid_width = 2.0; // in meters
+    this->occupancy_grid = std::vector<std::vector<bool>>(static_cast<size_t>(grid_width / cell_size), std::vector<bool>(static_cast<size_t>(grid_width / cell_size), 0));
+    
+    
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "Created new RRT Object.");
+
+    // Debug: drive forward for a short duration after initialization
+    rclcpp::Time start_time = this->get_clock()->now();
+    rclcpp::Duration drive_duration = rclcpp::Duration::from_seconds(5.0); // drive for 5 seconds
+
+    rclcpp::TimerBase::SharedPtr debug_timer;
+    debug_timer = this->create_wall_timer(std::chrono::milliseconds(100),
+        [this, start_time, drive_duration, &debug_timer]() {
+            rclcpp::Time now = this->get_clock()->now();
+            if (now - start_time < drive_duration) {
+                ackermann_msgs::msg::AckermannDriveStamped drive_msg;
+                drive_msg.header.stamp = now;
+                drive_msg.header.frame_id = "base_link";
+                drive_msg.drive.speed = 1.0;
+                drive_msg.drive.steering_angle = 0.0;
+                drive_pub_->publish(drive_msg);
+            } else {
+                RCLCPP_INFO(rclcpp::get_logger("RRT"), "Finished initial debug drive.");
+                if (debug_timer) debug_timer->cancel();
+            }
+        }
+    );
 }
 
 void RRT::scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) {
@@ -186,6 +211,14 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     path_pub_->publish(path_msg);
 
     // path found as Path message
+
+    // Publish a straight forward drive command (only forward speed, zero steering)
+    ackermann_msgs::msg::AckermannDriveStamped drive_msg;
+    drive_msg.header.stamp = this->get_clock()->now();
+    drive_msg.header.frame_id = "base_link";
+    drive_msg.drive.speed = 1.0; // forward speed in m/s
+    drive_msg.drive.steering_angle = 0.0; // straight
+    drive_pub_->publish(drive_msg);
 
 }
 
