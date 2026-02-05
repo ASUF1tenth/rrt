@@ -76,7 +76,7 @@ private:
     // RRT methods
     std::vector<double> sample();
     int nearest(std::vector<RRT_Node> &tree, std::vector<double> &sampled_point);
-    RRT_Node steer(std::vector<RRT_Node> &tree ,int nearest_node, std::vector<double> &sampled_point);
+    RRT_Node steer(RRT_Node &nearest_node, std::vector<double> &sampled_point);
     bool check_collision(RRT_Node &nearest_node, RRT_Node &new_node);
     bool is_goal(RRT_Node &latest_added_node, double goal_x, double goal_y);
     std::vector<RRT_Node> find_path(std::vector<RRT_Node> &tree, RRT_Node &latest_added_node);

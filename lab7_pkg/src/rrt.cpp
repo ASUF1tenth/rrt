@@ -225,7 +225,7 @@ int RRT::nearest(std::vector<RRT_Node> &tree, std::vector<double> &sampled_point
     return nearest_node;
 }
 
-RRT_Node RRT::steer(std::vector<RRT_Node> &tree ,int nearest_node, std::vector<double> &sampled_point) {
+RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) {
     // The function steer:(x,y)->z returns a point such that z is “closer” 
     // to y than x is. The point z returned by the function steer will be 
     // such that z minimizes ||z−y|| while at the same time maintaining 

@@ -32,36 +32,51 @@ class Node(object):
 # class def for RRT
 class RRT(Node):
     def __init__(self):
+        # initialize ROS2 node
+        super().__init__('rrt_node')
+
         # topics, not saved as attributes
-        # TODO: grab topics from param file, you'll need to change the yaml file
         pose_topic = "ego_racecar/odom"
         scan_topic = "/scan"
 
-        # you could add your own parameters to the rrt_params.yaml file,
-        # and get them here as class attributes as shown above.
+        # RRT parameters (defaults, can be overridden via params/yaml)
+        self.max_expansion_dist = 0.1
+        self.goal_threshold = 0.1
+        self.neighborhood_threshold = 0.5
 
-        # TODO: create subscribers
+        # occupancy grid parameters
+        self.cell_size = 0.05  # in meters
+        self.grid_width = 2.0  # in meters
+
+        # random generator and distributions
+        self.r = 0.5
+        self.gen = np.random.default_rng()
+        self.x_dist = lambda: self.gen.uniform(-self.r, self.r)
+        self.y_dist = lambda: self.gen.uniform(-self.r, self.r)
+
+        # create subscribers
+        # pose can be Odometry messages from ego_racecar/odom
         self.pose_sub_ = self.create_subscription(
-            PoseStamped,
+            Odometry,
             pose_topic,
             self.pose_callback,
             1)
-        self.pose_sub_
 
         self.scan_sub_ = self.create_subscription(
             LaserScan,
             scan_topic,
             self.scan_callback,
             1)
-        self.scan_sub_
 
-        # publishers
-        # TODO: create a drive message publisher, and other publishers that you might need
+        # publishers: drive, path, and optional tree visualization
+        self.drive_pub_ = self.create_publisher(AckermannDriveStamped, 'drive', 1)
+        self.path_pub_ = self.create_publisher(Path, 'path', 1)
+        try:
+            from visualization_msgs.msg import MarkerArray
+            self.tree_pub_ = self.create_publisher(MarkerArray, 'tree', 1)
+        except Exception:
+            self.tree_pub_ = None
 
-        # class attributes
-        # occupancy grid parameters (as requested)
-        self.cell_size = 0.05  # in meters
-        self.grid_width = 2.0  # in meters
         # occupancy_grid indexed as [grid_x][grid_y]
         self.occupancy_grid = [[False for _ in range(int(self.grid_width / self.cell_size))] for _ in range(int(self.grid_width / self.cell_size))]
 
@@ -248,9 +263,6 @@ class RRT(Node):
         new_node = Node()
         new_node.is_root = False
 
-        # maximum extension distance from nearest node towards sampled point
-        max_expansion_dist = 0.1
-
         dx = sampled_point[0] - nearest_node.x
         dy = sampled_point[1] - nearest_node.y
         denom = math.sqrt(dx * dx + dy * dy)
@@ -259,8 +271,8 @@ class RRT(Node):
             new_node.x = nearest_node.x
             new_node.y = nearest_node.y
         else:
-            new_node.x = nearest_node.x + max_expansion_dist * dx / denom
-            new_node.y = nearest_node.y + max_expansion_dist * dy / denom
+            new_node.x = nearest_node.x + self.max_expansion_dist * dx / denom
+            new_node.y = nearest_node.y + self.max_expansion_dist * dy / denom
 
         return new_node
 
@@ -270,7 +282,7 @@ class RRT(Node):
         collision free.
 
         Args:
-            nearest (Node): nearest node on the tree
+            nearest_node (Node): nearest node on the tree
             new_node (Node): new node from steering
         Returns:
             collision (bool): whether the path between the two nodes are in collision
@@ -322,15 +334,10 @@ class RRT(Node):
             close_enough (bool): true if node is close enoughg to the goal
         """
         # use a goal threshold attribute; default must be set elsewhere
-        try:
-            thresh = self.goal_threshold
-        except AttributeError:
-            # fallback default
-            thresh = 0.2
 
         dx = latest_added_node.x - goal_x
         dy = latest_added_node.y - goal_y
-        return (dx * dx + dy * dy) < (thresh * thresh)
+        return (dx * dx + dy * dy) < (self.goal_threshold * self.goal_threshold)
 
     def find_path(self, tree, latest_added_node):
         """
@@ -404,17 +411,12 @@ class RRT(Node):
             neighborhood ([]): neighborhood of nodes as a list of Nodes
         """
         neighborhood = []
-        try:
-            neigh_thresh = self.neighborhood_threshold
-        except AttributeError:
-            neigh_thresh = 0.5
 
-        thresh_sq = neigh_thresh * neigh_thresh
         for i in range(len(tree)):
             dx = tree[i].x - node.x
             dy = tree[i].y - node.y
             dist_sq = dx * dx + dy * dy
-            if dist_sq <= thresh_sq:
+            if dist_sq <= self.neighborhood_threshold * self.neighborhood_threshold:
                 neighborhood.append(i)
 
         return neighborhood
