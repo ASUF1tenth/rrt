@@ -79,8 +79,8 @@ void RRT::scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_m
         int grid_y = static_cast<int>((y + grid_width / 2.0) / cell_size);
 
         // Check bounds
-        if (grid_x >= 0 && grid_x < occupancy_grid.size() &&
-            grid_y >= 0 && grid_y < occupancy_grid[0].size()) {
+        if (grid_x >= 0 && grid_x < static_cast<int>(occupancy_grid.size()) &&
+            grid_y >= 0 && grid_y < static_cast<int>(occupancy_grid[0].size())) {
 
             occupancy_grid[grid_x][grid_y] = true; // occupied
         }
@@ -98,6 +98,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     // Returns:
     //
 
+    (void)pose_msg;
     // -----------------------------
     // ------- RRT MAIN LOOP -------
     // -----------------------------
@@ -130,7 +131,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
             double min_cost = cost(tree, new_node);
             
             double current_cost;
-            for (int i = 1; i < neighborhood.size(); i++) {
+            for (size_t i = 1; i < neighborhood.size(); i++) {
                 current_cost = cost(tree, tree[neighborhood[i]]) + line_cost(new_node, tree[neighborhood[i]]);
                 if (current_cost < min_cost) {
                     min_cost = current_cost;
@@ -219,9 +220,9 @@ int RRT::nearest(std::vector<RRT_Node> &tree, std::vector<double> &sampled_point
     // Returns:
     //     nearest_node (int): index of nearest node on the tree
 
-    int nearest_node = 0;
+    size_t nearest_node = 0;
     double dist_current_sq, dist_nearest_sq;
-    for (int i = 1; i < tree.size(); i++) {
+    for (size_t i = 1; i < tree.size(); i++) {
         dist_current_sq = pow((tree[i].x - sampled_point[0]), 2) + pow((tree[i].y - sampled_point[1]), 2);
         dist_nearest_sq = pow((tree[nearest_node].x - sampled_point[0]), 2) + pow((tree[nearest_node].y - sampled_point[1]), 2);
         if (dist_current_sq < dist_nearest_sq) { //if two nodes are equidistant, keep the first one
@@ -229,7 +230,7 @@ int RRT::nearest(std::vector<RRT_Node> &tree, std::vector<double> &sampled_point
         }
     }
 
-    return nearest_node;
+    return static_cast<int>(nearest_node);
 }
 
 RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) {
@@ -301,8 +302,8 @@ bool RRT::check_collision(RRT_Node &nearest_node, RRT_Node &new_node) {
         int grid_y = static_cast<int>((y + grid_width / 2.0) / cell_size);
 
         // Check bounds
-        if (grid_x < 0 || grid_x >= occupancy_grid.size() ||
-            grid_y < 0 || grid_y >= occupancy_grid[0].size()) {
+        if (grid_x < 0 || grid_x >= static_cast<int>(occupancy_grid.size()) ||
+            grid_y < 0 || grid_y >= static_cast<int>(occupancy_grid[0].size()) ) {
             continue;
         }
 
