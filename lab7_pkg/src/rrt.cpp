@@ -39,9 +39,10 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
     scan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
       scan_topic, 1, std::bind(&RRT::scan_callback, this, std::placeholders::_1));
 
-    double grid_width = 2.0; // in meters
+    cell_size = 0.05; // in meters
+    grid_width = 2.0; // in meters
     this->occupancy_grid = vector<vector<bool>>(grid_width / cell_size, vector<bool>(grid_width / cell_size, 0));
-    // scan_callback(scan_sub_); 
+    scan_callback(scan_sub_); 
 
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "Created new RRT Object.");
 }
@@ -98,9 +99,11 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     // Returns:
     //
 
-    // tree as std::vector
+    // -----------------------------
+    // ------- RRT MAIN LOOP -------
+    // -----------------------------
     bool RRT_star = false;
-    std::vector<RRT_Node> tree;
+    std::vector<RRT_Node> tree;  // tree as std::vector
 
     RRT_Node root = {0, 0, 0, -1, true}; // initialize the root node at the car's local position
     tree.push_back(root);
@@ -148,6 +151,9 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
 
     std::vector<RRT_Node> path = find_path(tree, latest_added_node);
 
+    // -----------------------------------
+    // ------- PUBLISHING THE PATH -------
+    // -----------------------------------
     nav_msgs::msg::Path path_msg;
     path_msg.header.stamp = this->get_clock()->now();
     path_msg.header.frame_id = "map";
@@ -188,8 +194,8 @@ std::vector<double> RRT::sample() {
     // the generator and the distribution is created for you (check the header file)
     
     double r = 0.5; // radius of the sampling region
-    x_dist.param({-r, r}); // set the range for x
-    y_dist.param({-r, r}); // set the range for y
+    x_dist = std::uniform_real_distribution<double>(-r, r); // set the range for x
+    y_dist = std::uniform_real_distribution<double>(-r, r); // set the range for y
 
     sampled_point.push_back(x_dist(gen));
     sampled_point.push_back(y_dist(gen));

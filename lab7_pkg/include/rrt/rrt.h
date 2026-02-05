@@ -17,6 +17,7 @@
 #include "ackermann_msgs/msg/ackermann_drive_stamped.hpp"
 #include "geometry_msgs/msg/pose_stamped.hpp"
 #include "visualization_msgs/msg/marker.hpp"
+#include <visualization_msgs/msg/marker_array.hpp>
 #include "nav_msgs/msg/occupancy_grid.hpp"
 #include <tf2_ros/transform_broadcaster.h>
 #include "nav_msgs/msg/path.hpp"
@@ -48,7 +49,8 @@ private:
     double goal_threshold = 0.1; // distance threshold to determine if goal reached
     double neighborhood_threshold = 0.5; // radius to search for nearby nodes in RRT*
 
-    double cell_size = 0.05; // size of each cell in occupancy grid
+    double cell_size;// size of each cell in occupancy grid
+    int grid_width; // width of occupancy grid in meters
     vector<vector<bool>> occupancy_grid; // occupancy grid representation
 
     // TODO: add the publishers and subscribers you need
@@ -74,7 +76,7 @@ private:
     // RRT methods
     std::vector<double> sample();
     int nearest(std::vector<RRT_Node> &tree, std::vector<double> &sampled_point);
-    RRT_Node steer(RRT_Node &nearest_node, std::vector<double> &sampled_point);
+    RRT_Node steer(std::vector<RRT_Node> &tree ,int nearest_node, std::vector<double> &sampled_point);
     bool check_collision(RRT_Node &nearest_node, RRT_Node &new_node);
     bool is_goal(RRT_Node &latest_added_node, double goal_x, double goal_y);
     std::vector<RRT_Node> find_path(std::vector<RRT_Node> &tree, RRT_Node &latest_added_node);
