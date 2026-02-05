@@ -401,7 +401,7 @@ std::vector<int> RRT::near(std::vector<RRT_Node> &tree, RRT_Node &node) {
 
     std::vector<int> neighborhood;
     double dist_sq;
-    for (int i = 0; i < tree.size(); i++) {
+    for (size_t i = 0; i < tree.size(); i++) {
         dist_sq = pow((tree[i].x - node.x), 2) + pow((tree[i].y - node.y), 2);
         if (dist_sq <= neighborhood_threshold * neighborhood_threshold) {
             neighborhood.push_back(i);
