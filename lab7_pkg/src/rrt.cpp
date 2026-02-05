@@ -55,28 +55,28 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
     
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "Created new RRT Object.");
 
-    // Debug: drive forward for a short duration after initialization
-    rclcpp::Time start_time = this->get_clock()->now();
-    rclcpp::Duration drive_duration = rclcpp::Duration::from_seconds(5.0); // drive for 5 seconds
+    // // Debug: drive forward for a short duration after initialization
+    // rclcpp::Time start_time = this->get_clock()->now();
+    // rclcpp::Duration drive_duration = rclcpp::Duration::from_seconds(5.0); // drive for 5 seconds
 
-    // Store the timer in a static variable so it survives beyond the
-    // constructor scope and keeps firing.
-    debug_timer_global = this->create_wall_timer(std::chrono::milliseconds(100),
-        [this, start_time, drive_duration]() {
-            rclcpp::Time now = this->get_clock()->now();
-            if (now - start_time < drive_duration) {
-                ackermann_msgs::msg::AckermannDriveStamped drive_msg;
-                drive_msg.header.stamp = now;
-                drive_msg.header.frame_id = "base_link";
-                drive_msg.drive.speed = 1.0;
-                drive_msg.drive.steering_angle = 0.0;
-                drive_pub_->publish(drive_msg);
-            } else {
-                RCLCPP_INFO(rclcpp::get_logger("RRT"), "Finished initial debug drive.");
-                // Let the timer continue; no further actions required here.
-            }
-        }
-    );
+    // // Store the timer in a static variable so it survives beyond the
+    // // constructor scope and keeps firing.
+    // debug_timer_global = this->create_wall_timer(std::chrono::milliseconds(100),
+    //     [this, start_time, drive_duration]() {
+    //         rclcpp::Time now = this->get_clock()->now();
+    //         if (now - start_time < drive_duration) {
+    //             ackermann_msgs::msg::AckermannDriveStamped drive_msg;
+    //             drive_msg.header.stamp = now;
+    //             drive_msg.header.frame_id = "base_link";
+    //             drive_msg.drive.speed = 1.0;
+    //             drive_msg.drive.steering_angle = 0.0;
+    //             drive_pub_->publish(drive_msg);
+    //         } else {
+    //             RCLCPP_INFO(rclcpp::get_logger("RRT"), "Finished initial debug drive.");
+    //             // Let the timer continue; no further actions required here.
+    //         }
+    //     }
+    // );
 }
 
 void RRT::scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) {
@@ -130,6 +130,8 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     //    pose_msg (*PoseStamped): pointer to the incoming pose message
     // Returns:
     //
+
+    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "Pose callback triggered, starting RRT main loop.");
 
     (void)pose_msg;
     // -----------------------------
@@ -218,15 +220,31 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
 
     path_pub_->publish(path_msg);
 
-    // path found as Path message
 
-    // Publish a straight forward drive command (only forward speed, zero steering)
-    ackermann_msgs::msg::AckermannDriveStamped drive_msg;
-    drive_msg.header.stamp = this->get_clock()->now();
-    drive_msg.header.frame_id = "base_link";
-    drive_msg.drive.speed = 1.0; // forward speed in m/s
-    drive_msg.drive.steering_angle = 0.0; // straight
-    drive_pub_->publish(drive_msg);
+
+    // path found as Path message
+    // Convert the first segment of the path to an Ackermann drive command and publish
+    if (!path.empty()) {
+        ackermann_msgs::msg::AckermannDriveStamped drive_msg;
+        drive_msg.header.stamp = this->get_clock()->now();
+        drive_msg.header.frame_id = "base_link";
+
+        if (path.size() >= 2) {
+            double dx = path[1].x - path[0].x;
+            double dy = path[1].y - path[0].y;
+            double dist = std::sqrt(dx*dx + dy*dy);
+            // steering angle in vehicle frame (assumes path is in car-local coords)
+            double steering = std::atan2(dy, dx);
+            double max_speed = 1.0; // m/s
+            drive_msg.drive.speed = std::min(max_speed, dist);
+            drive_msg.drive.steering_angle = steering;
+        } else {
+            drive_msg.drive.speed = 0.0;
+            drive_msg.drive.steering_angle = 0.0;
+        }
+
+        drive_pub_->publish(drive_msg);
+    }
 
 }
 
