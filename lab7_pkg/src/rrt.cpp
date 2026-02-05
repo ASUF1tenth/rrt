@@ -89,7 +89,7 @@ void RRT::scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_m
 
     // TODO: update your occupancy grid
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::scan_callback() CALLED");
-    
+
     for (auto &row : occupancy_grid) {
         std::fill(row.begin(), row.end(), false);
     }
@@ -329,9 +329,6 @@ RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) 
     if (dist == 0.0) {
         new_node.x = nearest_node.x;
         new_node.y = nearest_node.y;
-    } else if (dist <= max_expansion_dist) {
-        new_node.x = sampled_point[0];
-        new_node.y = sampled_point[1];
     } else {
         new_node.x = nearest_node.x + max_expansion_dist * (dx / dist);
         new_node.y = nearest_node.y + max_expansion_dist * (dy / dist);
@@ -443,12 +440,8 @@ double RRT::cost(std::vector<RRT_Node> &tree, RRT_Node &node) {
     //    cost (double): the cost value associated with the node
 
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::cost() CALLED");
-    if (node.is_root) {
-        return 0;
-    }
 
-    if (node.is_root) return 0.0; // safeguard
-    double total_cost = line_cost(node, tree[node.parent]) + cost(tree, tree[node.parent]);
+    double total_cost = line_cost(node, tree[node.parent]) + tree[node.parent].cost;
     return total_cost;
 }
 
@@ -461,9 +454,9 @@ double RRT::line_cost(RRT_Node &n1, RRT_Node &n2) {
     //    cost (double): the cost value associated with the path
 
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::line_cost() CALLED");
-    double cost = 0;
-    cost = sqrt(pow((n1.x - n2.x), 2) + pow((n1.y - n2.y), 2));
-    return cost;
+    double edge_cost = 0;
+    edge_cost = sqrt(pow((n1.x - n2.x), 2) + pow((n1.y - n2.y), 2));
+    return edge_cost;
 }
 
 std::vector<int> RRT::near(std::vector<RRT_Node> &tree, RRT_Node &node) {
