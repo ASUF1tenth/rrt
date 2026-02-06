@@ -147,7 +147,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     tree.push_back(root);
     
     RRT_Node latest_added_node = root;
-    while (! is_goal(latest_added_node, 0.3, 0.0)) { // goal is 0.2m in front of the car (like a carrot beyond any obstacles)
+    while (! is_goal(latest_added_node, 1.7, 0.0)) { // goal is 0.2m in front of the car (like a carrot beyond any obstacles)
         // sample
         std::vector<double> sampled_point = sample();
 
