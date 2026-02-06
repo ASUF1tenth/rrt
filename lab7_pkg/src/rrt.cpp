@@ -134,7 +134,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     // Returns:
     //
 
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::pose_callback() CALLED");
+    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::pose_callback() CALLED Position is (%.2f, %.2f)", pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
 
     (void)pose_msg;
     // -----------------------------
