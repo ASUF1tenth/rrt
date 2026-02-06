@@ -205,12 +205,30 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     path_msg.header.frame_id = "map";
     path_msg.poses.reserve(path.size());
 
+    // Extract car's orientation
+    double car_qx = pose_msg->pose.pose.orientation.x;
+    double car_qy = pose_msg->pose.pose.orientation.y;
+    double car_qz = pose_msg->pose.pose.orientation.z;
+    double car_qw = pose_msg->pose.pose.orientation.w;
+    
+    // Convert quaternion to yaw angle
+    double car_yaw = std::atan2(2.0 * (car_qw * car_qz + car_qx * car_qy),
+                                 1.0 - 2.0 * (car_qy * car_qy + car_qz * car_qz));
+
+    // Rotation matrix components
+    double cos_yaw = std::cos(car_yaw);
+    double sin_yaw = std::sin(car_yaw);
+
     for (const auto &node : path) {
         geometry_msgs::msg::PoseStamped pose;
         pose.header = path_msg.header;
 
-        pose.pose.position.x = pose_msg->pose.pose.position.x + node.x;
-        pose.pose.position.y = pose_msg->pose.pose.position.y + node.y;
+        // Rotate path point by car's yaw angle
+        double rotated_x = node.x * cos_yaw - node.y * sin_yaw;
+        double rotated_y = node.x * sin_yaw + node.y * cos_yaw;
+
+        pose.pose.position.x = pose_msg->pose.pose.position.x + rotated_x;
+        pose.pose.position.y = pose_msg->pose.pose.position.y + rotated_y;
         pose.pose.position.z = 0.0;
 
         pose.pose.orientation.x = 0.0;
