@@ -147,7 +147,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     tree.push_back(root);
     
     RRT_Node latest_added_node = root;
-    while (! is_goal(latest_added_node, 0.0, 0.2)) { // goal is 0.2m in front of the car (like a carrot beyond any obstacles)
+    while (! is_goal(latest_added_node, 0.3, 0.0)) { // goal is 0.2m in front of the car (like a carrot beyond any obstacles)
         // sample
         std::vector<double> sampled_point = sample();
 
@@ -209,8 +209,8 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
         geometry_msgs::msg::PoseStamped pose;
         pose.header = path_msg.header;
 
-        pose.pose.position.x = pose_sub_.pose.pose.position.x + node.x;
-        pose.pose.position.y = pose_sub_.pose.pose.position.y + node.y;
+        pose.pose.position.x = pose_msg->pose.pose.position.x + node.x;
+        pose.pose.position.y = pose_msg->pose.pose.position.y + node.y;
         pose.pose.position.z = 0.0;
 
         pose.pose.orientation.x = 0.0;
