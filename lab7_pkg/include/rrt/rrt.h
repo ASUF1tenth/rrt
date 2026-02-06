@@ -45,7 +45,7 @@ public:
 private:
 
     // RRT parameters
-    double max_expansion_dist = 0.3; // maximum distance to expand tree at each step
+    double max_expansion_dist = 0.7; // maximum distance to expand tree at each step
     double goal_threshold = 0.2; // distance threshold to determine if goal reached
     double neighborhood_threshold = 0.5; // radius to search for nearby nodes in RRT*
 

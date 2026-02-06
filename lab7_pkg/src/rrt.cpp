@@ -329,6 +329,9 @@ RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) 
     if (dist == 0.0) {
         new_node.x = nearest_node.x;
         new_node.y = nearest_node.y;
+    } else if (dist <= max_expansion_dist) {
+        new_node.x = sampled_point[0];
+        new_node.y = sampled_point[1];
     } else {
         new_node.x = nearest_node.x + max_expansion_dist * (dx / dist);
         new_node.y = nearest_node.y + max_expansion_dist * (dy / dist);
