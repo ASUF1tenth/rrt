@@ -55,29 +55,6 @@ RRT::RRT(): rclcpp::Node("rrt_node"), gen((std::random_device())()) {
     
     
     RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "Created new RRT Object.");
-
-    // // Debug: drive forward for a short duration after initialization
-    // rclcpp::Time start_time = this->get_clock()->now();
-    // rclcpp::Duration drive_duration = rclcpp::Duration::from_seconds(5.0); // drive for 5 seconds
-
-    // // Store the timer in a static variable so it survives beyond the
-    // // constructor scope and keeps firing.
-    // debug_timer_global = this->create_wall_timer(std::chrono::milliseconds(100),
-    //     [this, start_time, drive_duration]() {
-    //         rclcpp::Time now = this->get_clock()->now();
-    //         if (now - start_time < drive_duration) {
-    //             ackermann_msgs::msg::AckermannDriveStamped drive_msg;
-    //             drive_msg.header.stamp = now;
-    //             drive_msg.header.frame_id = "base_link";
-    //             drive_msg.drive.speed = 1.0;
-    //             drive_msg.drive.steering_angle = 0.0;
-    //             drive_pub_->publish(drive_msg);
-    //         } else {
-    //             RCLCPP_INFO(rclcpp::get_logger("RRT"), "Finished initial debug drive.");
-    //             // Let the timer continue; no further actions required here.
-    //         }
-    //     }
-    // );
 }
 
 void RRT::scan_callback(const sensor_msgs::msg::LaserScan::ConstSharedPtr scan_msg) {
@@ -134,7 +111,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     // Returns:
     //
 
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::pose_callback() CALLED Position is (%.2f, %.2f)", pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
+    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::pose_callback() CALLED");
 
     (void)pose_msg;
     // -----------------------------
@@ -148,6 +125,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     
     RRT_Node latest_added_node = root;
     while (! is_goal(latest_added_node, 1.7, 0.0)) { // goal is 0.2m in front of the car (like a carrot beyond any obstacles)
+         RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::inside main loop");
         // sample
         std::vector<double> sampled_point = sample();
 
@@ -223,6 +201,32 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
 
     path_pub_->publish(path_msg);
 
+
+    visualization_msgs::msg::Marker points;
+    points.header.frame_id = "map";
+    points.header.stamp = this->get_clock()->now();
+    points.ns = "rrt_tree";
+    points.id = 0;
+    points.type = visualization_msgs::msg::Marker::POINTS;
+    points.action = visualization_msgs::msg::Marker::ADD;
+    points.scale.x = 0.05;
+    points.scale.y = 0.05;
+    points.color.a = 1.0;
+    points.color.g = 1.0;
+
+    for (auto &node : tree) {
+        geometry_msgs::msg::Point p;
+        p.x = pose_msg->pose.pose.position.x + node.x;
+        p.y = pose_msg->pose.pose.position.y + node.y;
+        p.z = 0.0;
+        points.points.push_back(p);
+    }
+
+    visualization_msgs::msg::MarkerArray marker_array;
+    marker_array.markers.push_back(points);
+
+    tree_pub_->publish(marker_array);
+
     // path found as Path message
     
     // // Publish a straight forward drive command (only forward speed, zero steering)
@@ -270,7 +274,7 @@ std::vector<double> RRT::sample() {
     // look up the documentation on how to use std::mt19937 devices with a distribution
     // the generator and the distribution is created for you (check the header file)
     
-    double r = 0.5; // radius of the sampling region
+    double r = 2.0; // radius of the sampling region
     x_dist = std::uniform_real_distribution<double>(-r, r); // set the range for x
     y_dist = std::uniform_real_distribution<double>(-r, r); // set the range for y
 
