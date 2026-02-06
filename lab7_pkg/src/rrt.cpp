@@ -147,7 +147,7 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
     tree.push_back(root);
     
     RRT_Node latest_added_node = root;
-    while (! is_goal(latest_added_node, 0.0, 1.0)){
+    while (! is_goal(latest_added_node, 0.0, 0.2)) { // goal is 0.2m in front of the car (like a carrot beyond any obstacles)
         // sample
         std::vector<double> sampled_point = sample();
 
@@ -264,7 +264,7 @@ std::vector<double> RRT::sample() {
     // Args:
     // Returns:
     //     sampled_point (std::vector<double>): the sampled point in free space
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::sample() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::sample() CALLED");
 
     std::vector<double> sampled_point;
     // look up the documentation on how to use std::mt19937 devices with a distribution
@@ -288,7 +288,7 @@ int RRT::nearest(std::vector<RRT_Node> &tree, std::vector<double> &sampled_point
     //     sampled_point (std::vector<double>): the sampled point in free space
     // Returns:
     //     nearest_node (int): index of nearest node on the tree
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::nearest() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::nearest() CALLED");
 
     size_t nearest_node = 0;
     double dist_current_sq, dist_nearest_sq;
@@ -319,7 +319,7 @@ RRT_Node RRT::steer(RRT_Node &nearest_node, std::vector<double> &sampled_point) 
     //    new_node (RRT_Node): new node created from steering
 
     RRT_Node new_node;
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::steer() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::steer() CALLED");
     new_node.is_root = false;
 
     double dx = sampled_point[0] - nearest_node.x;
@@ -348,7 +348,7 @@ bool RRT::check_collision(RRT_Node &nearest_node, RRT_Node &new_node) {
     //    collision (bool): true if in collision, false otherwise
     // TODO: fill in this method
 
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::check_collision() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::check_collision() CALLED");
     // Step size for checking along the edge
     double step = cell_size / 2.0;
 
@@ -397,7 +397,7 @@ bool RRT::is_goal(RRT_Node &latest_added_node, double goal_x, double goal_y) {
     // Returns:
     //   close_enough (bool): true if node close enough to the goal
 
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::is_goal() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::is_goal() CALLED");
     bool close_enough = false;
     // if (x-x_goal)^2 + (y - y_goal)^2 < goal_threshold^2
     if (pow((latest_added_node.x - goal_x), 2) + pow((latest_added_node.y - goal_y), 2) < goal_threshold * goal_threshold) {
@@ -417,7 +417,7 @@ std::vector<RRT_Node> RRT::find_path(std::vector<RRT_Node> &tree, RRT_Node &late
     //   path (std::vector<RRT_Node>): the vector that represents the order of
     //      of the nodes traversed as the found path
     
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::find_path() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::find_path() CALLED");
     std::vector<RRT_Node> found_path = {latest_added_node};
     RRT_Node current_node = latest_added_node;
     
@@ -439,7 +439,7 @@ double RRT::cost(std::vector<RRT_Node> &tree, RRT_Node &node) {
     // Returns:
     //    cost (double): the cost value associated with the node
 
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::cost() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::cost() CALLED");
 
     double total_cost = line_cost(node, tree[node.parent]) + tree[node.parent].cost;
     return total_cost;
@@ -453,7 +453,7 @@ double RRT::line_cost(RRT_Node &n1, RRT_Node &n2) {
     // Returns:
     //    cost (double): the cost value associated with the path
 
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::line_cost() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::line_cost() CALLED");
     double edge_cost = 0;
     edge_cost = sqrt(pow((n1.x - n2.x), 2) + pow((n1.y - n2.y), 2));
     return edge_cost;
@@ -468,7 +468,7 @@ std::vector<int> RRT::near(std::vector<RRT_Node> &tree, RRT_Node &node) {
     // Returns:
     //   neighborhood (std::vector<int>): the index of the nodes in the neighborhood
 
-    RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::near() CALLED");
+    //RCLCPP_INFO(rclcpp::get_logger("RRT"), "%s\n", "RRT::near() CALLED");
     std::vector<int> neighborhood;
     double dist_sq;
     for (size_t i = 0; i < tree.size(); i++) {
