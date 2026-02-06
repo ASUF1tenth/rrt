@@ -209,8 +209,8 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
         geometry_msgs::msg::PoseStamped pose;
         pose.header = path_msg.header;
 
-        pose.pose.position.x = node.x;
-        pose.pose.position.y = node.y;
+        pose.pose.position.x = pose_sub_.pose.pose.position.x + node.x;
+        pose.pose.position.y = pose_sub_.pose.pose.position.y + node.y;
         pose.pose.position.z = 0.0;
 
         pose.pose.orientation.x = 0.0;
@@ -225,35 +225,35 @@ void RRT::pose_callback(const nav_msgs::msg::Odometry::ConstSharedPtr pose_msg) 
 
     // path found as Path message
     
-    // Publish a straight forward drive command (only forward speed, zero steering)
-    ackermann_msgs::msg::AckermannDriveStamped drive_msg;
-    drive_msg.header.stamp = this->get_clock()->now();
-    drive_msg.header.frame_id = "base_link";
-    drive_msg.drive.speed = 1.0; // forward speed in m/s
-    drive_msg.drive.steering_angle = 0.0; // straight
-    drive_pub_->publish(drive_msg);
+    // // Publish a straight forward drive command (only forward speed, zero steering)
+    // ackermann_msgs::msg::AckermannDriveStamped drive_msg;
+    // drive_msg.header.stamp = this->get_clock()->now();
+    // drive_msg.header.frame_id = "base_link";
+    // drive_msg.drive.speed = 1.0; // forward speed in m/s
+    // drive_msg.drive.steering_angle = 0.0; // straight
+    // drive_pub_->publish(drive_msg);
 
-    // if (!path.empty()) {
-    //     ackermann_msgs::msg::AckermannDriveStamped drive_msg;
-    //     drive_msg.header.stamp = this->get_clock()->now();
-    //     drive_msg.header.frame_id = "base_link";
+    if (!path.empty()) {
+        ackermann_msgs::msg::AckermannDriveStamped drive_msg;
+        drive_msg.header.stamp = this->get_clock()->now();
+        drive_msg.header.frame_id = "base_link";
 
-    //     if (path.size() >= 2) {
-    //         double dx = path[1].x - path[0].x;
-    //         double dy = path[1].y - path[0].y;
-    //         double dist = std::sqrt(dx*dx + dy*dy);
-    //         // steering angle in vehicle frame (assumes path is in car-local coords)
-    //         double steering = std::atan2(dy, dx);
-    //         double max_speed = 1.0; // m/s
-    //         drive_msg.drive.speed = std::min(max_speed, dist);
-    //         drive_msg.drive.steering_angle = steering;
-    //     } else {
-    //         drive_msg.drive.speed = 0.0;
-    //         drive_msg.drive.steering_angle = 0.0;
-    //     }
+        if (path.size() >= 2) {
+            double dx = path[1].x - path[0].x;
+            double dy = path[1].y - path[0].y;
+            double dist = std::sqrt(dx*dx + dy*dy);
+            // steering angle in vehicle frame (assumes path is in car-local coords)
+            double steering = std::atan2(dy, dx);
+            double max_speed = 1.0; // m/s
+            drive_msg.drive.speed = std::min(max_speed, dist);
+            drive_msg.drive.steering_angle = steering;
+        } else {
+            drive_msg.drive.speed = 0.0;
+            drive_msg.drive.steering_angle = 0.0;
+        }
 
-    //     drive_pub_->publish(drive_msg);
-    // }
+        drive_pub_->publish(drive_msg);
+    }
 
 }
 
